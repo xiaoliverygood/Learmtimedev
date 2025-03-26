@@ -12,6 +12,7 @@ import org.jeecg.modules.la.vo.ActivityApplyVo;
 import org.jeecg.modules.learntime.entity.ActivityRecord;
 import org.jeecg.modules.learntime.mapper.ActivityRecordMapper;
 import org.jeecg.modules.learntime.service.IActivityRecordService;
+import org.jeecg.modules.learntime.utils.StringUtil;
 import org.jeecg.modules.system.entity.SysDepart;
 import org.jeecg.modules.system.entity.SysUser;
 import org.jeecg.modules.system.mapper.SysUserMapper;
@@ -40,27 +41,46 @@ public class ActivityRecordServiceImpl extends ServiceImpl<ActivityRecordMapper,
 
     @Override
     public SysUser addCreditByActivityRecord(SysUser sysUser,ActivityRecord activityRecord) {
-        switch (activityRecord.getCreditType()) {
-            case 0:
-                // 思想道德素质
-                sysUser.setThought(sysUser.getThought() + activityRecord.getCredit());
-                break;
-            case 1:
-                // 法律素养
-                sysUser.setLaw(sysUser.getLaw() + activityRecord.getCredit());
-                break;
-            case 2:
-                // 身心素质
-                sysUser.setBodyMind(sysUser.getBodyMind() + activityRecord.getCredit());
-                break;
-            case 3:
-                // 创新创业素质
-                sysUser.setInnovation(sysUser.getInnovation() + activityRecord.getCredit());
-                break;
-            case 4:
-                // 文体素质
-                sysUser.setCultureSports(sysUser.getCultureSports() + activityRecord.getCredit());
+//        switch (activityRecord.getCreditType()) {
+//            case 0:
+//                // 思想道德素质
+//                sysUser.setThought(sysUser.getThought() + activityRecord.getCredit());
+//                break;
+//            case 1:
+//                // 法律素养
+//                sysUser.setLaw(sysUser.getLaw() + activityRecord.getCredit());
+//                break;
+//            case 2:
+//                // 身心素质
+//                sysUser.setBodyMind(sysUser.getBodyMind() + activityRecord.getCredit());
+//                break;
+//            case 3:
+//                // 创新创业素质
+//                sysUser.setInnovation(sysUser.getInnovation() + activityRecord.getCredit());
+//                break;
+//            case 4:
+//                // 文体素质
+//                sysUser.setCultureSports(sysUser.getCultureSports() + activityRecord.getCredit());
+//                break;
+//        }
+        String type = activityRecord.getCreditType();
+        if ("0".equals(type)) {
+            // 思想道德素质
+            sysUser.setThought(sysUser.getThought() + activityRecord.getCredit());
+        }else if("1".equals(type)) {
+            // 法律素养
+            sysUser.setLaw(sysUser.getLaw() + activityRecord.getCredit());
+        }else if("2".equals(type)) {
+            // 身心素质
+            sysUser.setBodyMind(sysUser.getBodyMind() + activityRecord.getCredit());
+        }else if("3".equals(type)) {
+            // 创新创业素质
+            sysUser.setInnovation(sysUser.getInnovation() + activityRecord.getCredit());
+        }else if("4".equals(type)) {
+            // 文体素质
+            sysUser.setCultureSports(sysUser.getCultureSports() + activityRecord.getCredit());
         }
+        // 将总学时取出并加上数量
         sysUser.setTotal(sysUser.getTotal() + activityRecord.getCredit());
 //        // 修改用户数据
 //        sysUserMapper.updateById(sysUser);
@@ -81,28 +101,25 @@ public class ActivityRecordServiceImpl extends ServiceImpl<ActivityRecordMapper,
         // 通过用户名查找用户
         SysUser sysUser = sysUserMapper.getUserByName(activityRecord.getUid());
         // 匹配学士类型，讲用户的学时减去
-        switch (activityRecord.getCreditType()) {
-            case 0:
-                // 思想道德素质
-                sysUser.setThought(sysUser.getThought() - activityRecord.getCredit());
-                break;
-            case 1:
-                // 法律素养
-                sysUser.setLaw(sysUser.getLaw() - activityRecord.getCredit());
-                break;
-            case 2:
-                // 身心素质
-                sysUser.setBodyMind(sysUser.getBodyMind() - activityRecord.getCredit());
-                break;
-            case 3:
-                // 创新创业素质
-                sysUser.setInnovation(sysUser.getInnovation() - activityRecord.getCredit());
-                break;
-            default:
-                // 文体素质
-                sysUser.setCultureSports(sysUser.getCultureSports() - activityRecord.getCredit());
+        String type = activityRecord.getCreditType();
+        if ("0".equals(type)) {
+            // 思想道德素质
+            sysUser.setThought(sysUser.getThought() - activityRecord.getCredit());
+        }else if("1".equals(type)) {
+            // 法律素养
+            sysUser.setLaw(sysUser.getLaw() - activityRecord.getCredit());
+        }else if("2".equals(type)) {
+            // 身心素质
+            sysUser.setBodyMind(sysUser.getBodyMind() - activityRecord.getCredit());
+        }else if("3".equals(type)) {
+            // 创新创业素质
+            sysUser.setInnovation(sysUser.getInnovation() - activityRecord.getCredit());
+        }else if("4".equals(type)) {
+            // 文体素质
+            sysUser.setCultureSports(sysUser.getCultureSports() - activityRecord.getCredit());
         }
-        sysUser.setCultureSports(sysUser.getTotal() - activityRecord.getCredit());
+        // 减去总学时
+        sysUser.setTotal(sysUser.getTotal() - activityRecord.getCredit());
         // 修改用户数据
         sysUserMapper.updateById(sysUser);
         // 删除学时记录
@@ -142,13 +159,25 @@ public class ActivityRecordServiceImpl extends ServiceImpl<ActivityRecordMapper,
      * @return
      */
     @Override
-    public IPage<ActivityRecord> queryActivityRecordByOrgCodeWithGradePageList(String ordCode, Integer grade, Page<ActivityRecord> page) {
+    public IPage<ActivityRecord> queryActivityRecordByOrgCodeWithGradePageList(String ordCode, Integer grade, Page<ActivityRecord> page,ActivityRecord activityRecord) {
 
-        List<ActivityRecord> list = baseMapper.getActivityRecordByGradeWithOrgCode(page, ordCode, grade);
-        Integer total = baseMapper.getActivityRecordByOrgCodeWithGradeTotal(ordCode, grade);
+        activityRecord.setName(StringUtil.isNotEmptyThenReplace(activityRecord.getName()));
+        activityRecord.setActivityName(StringUtil.isNotEmptyThenReplace(activityRecord.getActivityName()));
+
+        List<ActivityRecord> list = baseMapper.getActivityRecordByGradeWithOrgCode(page, ordCode, grade,activityRecord);
+        Integer total = baseMapper.getActivityRecordByOrgCodeWithGradeTotal(ordCode, grade,activityRecord);
         IPage<ActivityRecord> result = new Page<>(page.getCurrent(), page.getSize(),total);
         result.setRecords(list);
         return result;
 
+    }
+
+    @Override
+    public List<ActivityRecord> queryActivityRecordByOrgCodeWithGradeList(String ordCode, Integer grade, ActivityRecord activityRecord) {
+        activityRecord.setName(StringUtil.isNotEmptyThenReplace(activityRecord.getName()));
+        activityRecord.setActivityName(StringUtil.isNotEmptyThenReplace(activityRecord.getActivityName()));
+
+        List<ActivityRecord> list = baseMapper.getActivityRecordByGradeWithOrgCodeNotPage(ordCode, grade,activityRecord);
+        return list;
     }
 }

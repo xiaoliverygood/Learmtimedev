@@ -168,6 +168,7 @@ public class SysUserController {
                     queryWrapper.eq("grade",sysUser.getGrade());
                 }
                 queryWrapper.eq("org_code",sysUser.getOrgCode());
+                break;
         }
 
         Page<SysUser> page = new Page<SysUser>(pageNo, pageSize);
@@ -227,6 +228,7 @@ public class SysUserController {
                 user.setBodyMind(0.0);
                 user.setLaw(0.0);
                 user.setCultureSports(0.0);
+                user.setTotal(0.0);
             }
 
 
@@ -261,14 +263,14 @@ public class SysUserController {
                     //vue3.0前端只传递了departIds
                     departs=user.getDepartIds();
                 }
-                if (user.getUserIdentity() == 2){
+//                if (user.getUserIdentity() == 2){
                     // 获取部门数据
                     SysDepart sysDepart = sysDepartService.getById(departs);
                     // 给用户添加org_code 部门的编码
                     user.setOrgCode(sysDepart.getOrgCode());
                     // 设置部门的名称 在这指学院
                     user.setOrgCodeTxt(sysDepart.getDepartName());
-                }
+//                }
 
                 // 修改用户走一个service 保证事务
 				sysUserService.editUser(user, roles, departs);
@@ -511,7 +513,7 @@ public class SysUserController {
      * @param sysUser
      */
     @RequestMapping(value = "/exportXls")
-    public ModelAndView exportXls(SysUser sysUser,HttpServletRequest request) {
+    public ModelAndView exportXls(SysUser sysUser, HttpServletRequest request) {
         // Step.1 组装查询条件
         QueryWrapper<SysUser> queryWrapper = QueryGenerator.initQueryWrapper(sysUser, request.getParameterMap());
         //Step.2 AutoPoi 导出Excel
@@ -624,6 +626,8 @@ public class SysUserController {
                         // 密码默认为 “123456”
                         sysUserExcel.setPassword("123456");
                     }
+                    // 去掉名字里面的空格
+                    sysUserExcel.setRealname(sysUserExcel.getRealname().replace(" ",""));
                     // 密码加密加盐
                     String salt = oConvertUtils.randomGen(8);
                     sysUserExcel.setSalt(salt);
@@ -636,14 +640,15 @@ public class SysUserController {
                     sysUserExcel.setDelFlag(0);
                     // 同步工作流引擎1同步0不同步
                     sysUserExcel.setActivitiSync(1);
-                    if (sysUserExcel.getUserIdentity() == 1) {
-                        // 设置学时，添加用户默认为0.0
-                        sysUserExcel.setInnovation(0.0);
-                        sysUserExcel.setThought(0.0);
-                        sysUserExcel.setBodyMind(0.0);
-                        sysUserExcel.setLaw(0.0);
-                        sysUserExcel.setCultureSports(0.0);
-                    }
+
+                    // 设置学时，导入的用户默认为学生，学时设置为0.0
+                    sysUserExcel.setInnovation(0.0);
+                    sysUserExcel.setThought(0.0);
+                    sysUserExcel.setBodyMind(0.0);
+                    sysUserExcel.setLaw(0.0);
+                    sysUserExcel.setCultureSports(0.0);
+                    sysUserExcel.setTotal(0.0);
+
                     // 获取部门所有数据
                     List<SysDepart> departList = sysDepartService.list();
                     String orgCodeTxt = sysUserExcel.getOrgCodeTxt();

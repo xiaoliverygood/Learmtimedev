@@ -134,8 +134,6 @@ spring:
           url: jdbc:mysql://127.0.0.1:3306/learntime?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
           username: learntime
           password: rL8BBM2zLtK2PGGw
-#          username: root
-#          password: 374186
           driver-class-name: com.mysql.cj.jdbc.Driver
           # 多数据源配置
           #multi-datasource1:

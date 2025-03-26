@@ -47,12 +47,21 @@ public interface IActivityRecordService extends IService<ActivityRecord> {
     public void addCreditByActivityRecordBatch(List<SysUser> sysUserList,List<ActivityRecord> activityRecordList);
 
     /**
-     * 通过部门编号以及年级查找列表
+     * 通过部门编号以及年级查找分页列表
      * @param ordCode
      * @param grade
      * @param page
+     * @returnActivityRecord activityRecord
+     */
+    public IPage<ActivityRecord> queryActivityRecordByOrgCodeWithGradePageList(String ordCode, Integer grade,Page<ActivityRecord> page,ActivityRecord activityRecord);
+
+    /**
+     * 通过部门编号以及年级查找列表
+     * @param ordCode
+     * @param grade
+     * @param activityRecord
      * @return
      */
-    public IPage<ActivityRecord> queryActivityRecordByOrgCodeWithGradePageList(String ordCode, Integer grade,Page<ActivityRecord> page);
+    public List<ActivityRecord> queryActivityRecordByOrgCodeWithGradeList(String ordCode, Integer grade,ActivityRecord activityRecord);
 
 }

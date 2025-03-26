@@ -22,7 +22,7 @@ public class ActivityImportExcelUtil {
             String fileUrl = ActivityPmsUtil.saveExcelByList(errorList, "ImportExcelError");
             int lastIndex = fileUrl.lastIndexOf(File.separator);
             String fileName = fileUrl.substring(lastIndex + 1);
-            result.put("fileUrl", "/sys/common/static/" + fileUrl);
+            result.put("fileUrl", "/sys/common/static/"+fileUrl);
             result.put("fileName", fileName);
             Result res = Result.ok(result);
             res.setCode(201);

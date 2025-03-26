@@ -268,6 +268,40 @@ export const JeecgListMixin = {
         fileName = '导出文件'
       }
       let param = this.getQueryParams()
+      this.$message.success( this.getQueryParams())
+      if (this.selectedRowKeys && this.selectedRowKeys.length > 0) {
+        param['selections'] = this.selectedRowKeys.join(',')
+      }
+      console.log('导出参数', param)
+      downFile(this.url.exportXlsUrl, param).then((data) => {
+        if (!data) {
+          this.$message.warning('文件下载失败')
+          return
+        }
+        if (typeof window.navigator.msSaveBlob !== 'undefined') {
+          window.navigator.msSaveBlob(new Blob([data], { type: 'application/vnd.ms-excel' }), fileName + '.xls')
+        } else {
+          let url = window.URL.createObjectURL(new Blob([data], { type: 'application/vnd.ms-excel' }))
+          let link = document.createElement('a')
+          link.style.display = 'none'
+          link.href = url
+          link.setAttribute('download', fileName + '.xls')
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link) //下载完成移除元素
+          window.URL.revokeObjectURL(url) //释放掉blob对象
+        }
+      })
+    },
+    handleExportXlsByClass(fileName) {
+      if (!fileName || typeof fileName != 'string') {
+        fileName = '导出文件'
+      }
+      let param = this.getQueryParams()
+      // if (!param.clazz) {
+      //   this.$message.warning('请填写班级')
+      //   return
+      // }
       if (this.selectedRowKeys && this.selectedRowKeys.length > 0) {
         param['selections'] = this.selectedRowKeys.join(',')
       }
@@ -293,6 +327,7 @@ export const JeecgListMixin = {
       })
     },
     handleExportXlsTamp(fileName) {
+      this.$message.success(fileName)
       if (!fileName || typeof fileName != 'string') {
         fileName = '模板文件'
       }

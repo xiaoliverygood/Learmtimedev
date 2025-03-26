@@ -136,15 +136,14 @@
             this.Login(loginParams).then((res) => {
               this.$emit('success', res.result)
             }).catch((err) => {
+              this.handleChangeCheckCode()
               this.$emit('fail', err)
             });
           }else{
             this.$emit('validateFail')
           }
         })
-      }
-
-
+      },
     }
 
   }

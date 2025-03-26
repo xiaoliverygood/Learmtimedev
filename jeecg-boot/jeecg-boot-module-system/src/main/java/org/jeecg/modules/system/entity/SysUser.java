@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jeecg.common.aspect.annotation.Dict;
 import org.jeecgframework.poi.excel.annotation.Excel;
+import org.jeecgframework.poi.excel.annotation.ExcelIgnore;
 import org.springframework.format.annotation.DateTimeFormat;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -84,36 +85,37 @@ public class SysUser implements Serializable {
     /**
      * 总学时
      */
+    @Excel(name = "总学时", width = 15)
     private Double total;
 
     /**
      * 创新创业素质学时
      */
-//    @Excel(name = "创新创业素质", width = 15)
+    @Excel(name = "创新创业素质", width = 15)
     private Double innovation;
 
     /**
      * 思想品德素质学时
      */
-//    @Excel(name = "思想品德素质", width = 15)
+    @Excel(name = "思想品德素质", width = 15)
     private Double thought;
 
     /**
      * 身心素质学时
      */
-//    @Excel(name = "身心素质", width = 15)
+    @Excel(name = "身心素质", width = 15)
     private Double bodyMind;
 
     /**
      * 法律素养学时
      */
-//    @Excel(name = "法律素养", width = 15)
+    @Excel(name = "法律素养", width = 15)
     private Double law;
 
     /**
      * 文体素质学时
      */
-//    @Excel(name = "文体素质", width = 15)
+    @Excel(name = "文体素质", width = 15)
     private Double cultureSports;
 
     /**

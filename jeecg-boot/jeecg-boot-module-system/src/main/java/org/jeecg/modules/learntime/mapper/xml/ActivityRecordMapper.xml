@@ -62,14 +62,14 @@
         </foreach>
     </update>
 
-    <select id="getActivityRecordByGradeWithOrgCode"  resultType="org.jeecg.modules.learntime.entity.ActivityRecord">
+    <select id="getActivityRecordByGradeWithOrgCode" parameterType="Object" resultType="org.jeecg.modules.learntime.entity.ActivityRecord">
         SELECT
             activity_record.id,
             activity_record.activity_name,
             activity_record.sponsor,
             activity_record.uid,
             activity_record.`name`,
-            activity_record.clazz,
+            sys_user.clazz,
             activity_record.academy,
             activity_record.award,
             activity_record.join_type,
@@ -79,31 +79,78 @@
             activity_record.`year`,
             activity_record.remark,
             activity_record.to_name,
-            activity_record.`status`,
             activity_record.create_by,
             activity_record.update_by,
             activity_record.create_time,
             activity_record.update_time
-        FROM
-            activity_record
-                INNER JOIN sys_user ON activity_record.uid = sys_user.username
-        WHERE
-            org_code = #{orgCode}
-        <if test="grade != null" >
-            AND grade = #{grade}
-        </if>
+        <include refid="getActivityRecordByOrgCodeWithGradeFromSql"/>
+    </select>
+
+    <select id="getActivityRecordByGradeWithOrgCodeNotPage" parameterType="Object" resultType="org.jeecg.modules.learntime.entity.ActivityRecord">
+        SELECT
+        activity_record.id,
+        activity_record.activity_name,
+        activity_record.sponsor,
+        activity_record.uid,
+        activity_record.`name`,
+        sys_user.clazz,
+        activity_record.academy,
+        activity_record.award,
+        activity_record.join_type,
+        activity_record.credit_type,
+        activity_record.credit,
+        activity_record.contact,
+        activity_record.`year`,
+        activity_record.remark,
+        activity_record.to_name,
+        activity_record.create_by,
+        activity_record.update_by,
+        activity_record.create_time,
+        activity_record.update_time
+        <include refid="getActivityRecordByOrgCodeWithGradeFromSql"/>
     </select>
 
     <select id="getActivityRecordByOrgCodeWithGradeTotal" resultType="java.lang.Integer">
-        SELECT COUNT(1)
+        SELECT COUNT(1) <include refid="getActivityRecordByOrgCodeWithGradeFromSql"/>
+    </select>
+
+    <!-- SQL片段：getActivityRecordByOrgCodeWithGradeFromSql 的 FROM 和 WHERE 部分 -->
+    <!-- 如果有grade表示是某一级辅导员，没有代表管理员 -->
+    <!-- activityRecord查询的参数学号查询 -->
+
+
+    <sql id="getActivityRecordByOrgCodeWithGradeFromSql">
         FROM
         activity_record
         INNER JOIN sys_user ON activity_record.uid = sys_user.username
         WHERE
-        org_code = #{orgCode}
+        sys_user.org_code LIKE '${orgCode}%'
         <if test="grade != null" >
             AND grade = #{grade}
         </if>
-    </select>
-
+        <if test="activityRecord != null">
+            <if test="activityRecord.uid != null and activityRecord.uid != ''">
+                AND activity_record.uid LIKE concat(#{activityRecord.uid},'%')
+            </if>
+            <if test="activityRecord.name != null and activityRecord.name != ''">
+                AND activity_record.name LIKE concat(concat('%',#{activityRecord.name}),'%')
+            </if>
+            <if test="activityRecord.clazz != null and activityRecord.clazz != ''">
+                AND sys_user.clazz = #{activityRecord.clazz}
+            </if>
+            <if test="activityRecord.activityName != null and activityRecord.activityName != ''">
+                AND activity_record.activity_name LIKE concat(concat('%',#{activityRecord.activityName}),'%')
+            </if>
+            <if test="activityRecord.academy != null and activityRecord.academy != ''">
+                AND activity_record.academy = #{activityRecord.academy}
+            </if>
+            <if test="activityRecord.year != null and activityRecord.year != ''">
+                AND activity_record.year = #{activityRecord.year}
+            </if>
+            <if test="activityRecord.createBy != null and activityRecord.createBy != ''">
+                AND activity_record.create_by LIKE concat(concat('%',#{activityRecord.createBy}),'%')
+            </if>
+        </if>
+        order by cast(activity_record.id as CHAR) desc
+    </sql>
 </mapper>

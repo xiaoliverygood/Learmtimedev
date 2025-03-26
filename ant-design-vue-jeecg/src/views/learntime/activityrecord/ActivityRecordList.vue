@@ -20,7 +20,7 @@
 
           <a-col :md="6" :sm="8">
             <a-form-item label="专业班级">
-              <j-input placeholder="请输入专业班级模糊查询" v-model="queryParam.clazz"></j-input>
+              <a-input placeholder="请输入专业班级查询" v-model="queryParam.clazz"></a-input>
             </a-form-item>
           </a-col>
 
@@ -33,7 +33,7 @@
 
             <a-col :md="6" :sm="8">
               <a-form-item label="所在学院">
-                <a-select v-model="queryParam.sponsor" placeholder="请选择">
+                <a-select v-model="queryParam.academy" placeholder="请选择">
                   <a-select-option value="">请选择</a-select-option>
                   <a-select-option v-for="depart in departList" :key="depart.id" :value="depart.id">
                     {{ depart.departName }}
@@ -100,10 +100,12 @@
         type="primary"
         icon="download"
         size="small"
-        @click="downloadFile('http://10.0.0.43/file/%E5%B9%BF%E5%B7%9E%E5%95%86%E5%AD%A6%E9%99%A2%E2%80%9C4+X%E2%80%9D%E6%B4%BB%E5%8A%A8%E5%AD%A6%E6%97%B6%E8%AE%A4%E5%AE%9A%E7%99%BB%E8%AE%B0%E8%A1%A8(2022%E7%89%88).xls')">
+        @click="downloadFile('download/%E5%B9%BF%E5%B7%9E%E5%95%86%E5%AD%A6%E9%99%A2%E2%80%9C4+X%E2%80%9D%E6%B4%BB%E5%8A%A8%E5%AD%A6%E6%97%B6%E8%AE%A4%E5%AE%9A%E7%99%BB%E8%AE%B0%E8%A1%A8(2022%E7%89%88).xls')">
         下载模板
+
       </a-button>
-<!--      <a-button type="primary" icon="download" @click="handleExportXls('广州商学院“4+X”活动学时认定登记表')">导出</a-button>-->
+<!--      <a-button type="primary" icon="download" @click="handleExportXlsByClass('广州商学院“4+X”活动学时认定登记表')">导出</a-button>-->
+      <a-button type="primary" icon="download" @click="handleExportXls('广州商学院“4+X”活动学时认定登记表')">导出</a-button>
       <a-upload name="file" :showUploadList="false" :multiple="false" :headers="tokenHeader" :action="importExcelUrl" @change="handleImportExcel">
         <a-button type="primary" icon="import">导入</a-button>
       </a-upload>
@@ -190,7 +192,6 @@
   import { mixinDevice } from '@/utils/mixin'
   import { JeecgListMixin } from '@/mixins/JeecgListMixin'
   import ActivityRecordModal from './modules/ActivityRecordModal'
-  import {filterMultiDictText} from '@/components/dict/JDictSelectUtil'
   import { getAction } from '@api/manage'
   import { queryDepartTreeSync,treeList } from '@api/api'
 

@@ -38,7 +38,9 @@ public interface ActivityRecordMapper extends BaseMapper<ActivityRecord> {
      * @param grade
      * @return
      */
-    List<ActivityRecord> getActivityRecordByGradeWithOrgCode(IPage page, @Param("orgCode")String orgCode, @Param("grade")Integer grade);
+    List<ActivityRecord> getActivityRecordByGradeWithOrgCode(IPage page, @Param("orgCode")String orgCode, @Param("grade")Integer grade,@Param("activityRecord") ActivityRecord activityRecord);
 
-    public Integer getActivityRecordByOrgCodeWithGradeTotal(@Param("orgCode") String orgCode, @Param("grade")Integer grade);
+    List<ActivityRecord> getActivityRecordByGradeWithOrgCodeNotPage(@Param("orgCode")String orgCode, @Param("grade")Integer grade,@Param("activityRecord") ActivityRecord activityRecord);
+
+    Integer getActivityRecordByOrgCodeWithGradeTotal(@Param("orgCode") String orgCode, @Param("grade")Integer grade,@Param("activityRecord") ActivityRecord activityRecord);
 }

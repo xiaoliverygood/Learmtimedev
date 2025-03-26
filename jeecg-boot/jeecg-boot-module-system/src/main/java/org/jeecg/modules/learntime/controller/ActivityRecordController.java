@@ -9,21 +9,27 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.alibaba.fastjson.JSONObject;
 import org.apache.shiro.SecurityUtils;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.aspect.annotation.PermissionData;
 import org.jeecg.common.system.query.QueryGenerator;
+import org.jeecg.common.system.vo.DictModel;
 import org.jeecg.common.system.vo.LoginUser;
 import org.jeecg.common.util.ImportExcelUtil;
+import org.jeecg.common.util.oConvertUtils;
 import org.jeecg.modules.learntime.entity.ActivityRecord;
+import org.jeecg.modules.learntime.entity.FileStorage;
 import org.jeecg.modules.learntime.service.IActivityRecordService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.jeecg.common.system.base.controller.JeecgController;
+import org.jeecg.modules.learntime.service.IFileStorageService;
 import org.jeecg.modules.learntime.utils.ActivityImportExcelUtil;
 import org.jeecg.modules.system.entity.SysUser;
+import org.jeecg.modules.system.model.SysDepartTreeModel;
 import org.jeecg.modules.system.service.ISysDepartService;
 import org.jeecg.modules.system.service.ISysDictService;
 import org.jeecg.modules.system.service.ISysUserService;
@@ -65,6 +71,8 @@ public class ActivityRecordController extends JeecgController<ActivityRecord, IA
     private ISysUserService sysUserService;
     @Autowired
     private ISysDepartService sysDepartService;
+    @Autowired
+    private IFileStorageService fileStorageService;
 
     /**
      * 分页列表查询
@@ -92,10 +100,15 @@ public class ActivityRecordController extends JeecgController<ActivityRecord, IA
             // 如果角色是学生，查询登录者的学号，只查询自己的数据
             queryWrapper.eq("uid", loginUser.getUsername());
         }
-        if (loginUser.getUserIdentity() == 2 && !"admin".equals(loginUser.getUsername())){
-            // 获取登录的用户信息
+        if (loginUser.getUserIdentity() == 2 && !"admin".equals(loginUser.getUsername()) && loginUser.getOrgCode().length() != 3){
+            // 获取登录的用户信息找到学院信息,年级信息
             SysUser sysUser = sysUserService.getUserByName(loginUser.getUsername());
-            pageList = activityRecordService.queryActivityRecordByOrgCodeWithGradePageList(sysUser.getOrgCode(), sysUser.getGrade(),page);
+            /**
+             * 获取部门编号 每三个字符作为划分，左边相同则代表为上级部门
+             * A12编号为广州商学院 A12A05为会计学院，左三个字符相同表示广州商学院是会计学院的上级部门
+             * 若有A12A05B01编号的部门，左侧A12A05与会计学院相同表示会计学院是该部门的上级，以此类推
+             */
+            pageList = activityRecordService.queryActivityRecordByOrgCodeWithGradePageList(sysUser.getOrgCode(), sysUser.getGrade(),page,activityRecord);
         } else {
             pageList = activityRecordService.page(page, queryWrapper);
         }
@@ -188,13 +201,58 @@ public class ActivityRecordController extends JeecgController<ActivityRecord, IA
 
     /**
      * 导出excel
-     *
      * @param request
      * @param activityRecord
      */
     @RequestMapping(value = "/exportXls")
     public ModelAndView exportXls(HttpServletRequest request, ActivityRecord activityRecord) {
-        return super.exportXls(request, activityRecord, ActivityRecord.class, "广州商学院“4+X”活动学时认定登记表");
+//        return super.exportXls(request, activityRecord, ActivityRecord.class, "广州商学院“4+X”活动学时认定登记表");
+        // Step.1 组装查询条件
+        QueryWrapper<ActivityRecord> queryWrapper = QueryGenerator.initQueryWrapper(activityRecord, request.getParameterMap());
+        //Step.2 AutoPoi 导出Excel
+        ModelAndView mv = new ModelAndView(new JeecgEntityExcelView());
+        List<ActivityRecord> pageList = null;
+        // 获取登录的用户信息
+        LoginUser loginUser = (LoginUser) SecurityUtils.getSubject().getPrincipal();
+        if (loginUser.getUserIdentity() == 1) {
+            // 如果角色是学生，查询登录者的学号，只查询自己的数据
+            queryWrapper.eq("uid", loginUser.getUsername());
+        }
+        //update-begin--Author:kangxiaolin  Date:20180825 for：[03]导出，如果选择数据则只导出相关数据--------------------
+        String selections = request.getParameter("selections");
+        if(!oConvertUtils.isEmpty(selections)){
+            queryWrapper.in("id",selections.split(","));
+        }
+        if (loginUser.getUserIdentity() == 2 && !"admin".equals(loginUser.getUsername()) && loginUser.getOrgCode().length() != 3){
+            // 获取登录的用户信息找到学院信息,年级信息
+            SysUser sysUser = sysUserService.getUserByName(loginUser.getUsername());
+            /**
+             * 获取部门编号 每三个字符作为划分，左边相同则代表为上级部门
+             * A12编号为广州商学院 A12A05为会计学院，左三个字符相同表示广州商学院是会计学院的上级部门
+             * 若有A12A05B01编号的部门，左侧A12A05与会计学院相同表示会计学院是该部门的上级，以此类推
+             */
+            pageList = activityRecordService.queryActivityRecordByOrgCodeWithGradeList(sysUser.getOrgCode(), sysUser.getGrade(),activityRecord);
+        } else {
+            pageList = activityRecordService.list(queryWrapper);
+        }
+        //update-end--Author:kangxiaolin  Date:20180825 for：[03]导出，如果选择数据则只导出相关数据----------------------
+//        List<SysUser> pageList = sysUserService.list(queryWrapper);
+
+        //导出文件名称
+        mv.addObject(NormalExcelConstants.FILE_NAME, "广州商学院“4+X”活动学时认定登记表");
+        mv.addObject(NormalExcelConstants.CLASS, ActivityRecord.class);
+//		LoginUser user = (LoginUser) SecurityUtils.getSubject().getPrincipal();
+        ExportParams exportParams = new ExportParams("广州商学院“4+X”活动学时认定登记表", "导出信息");
+        exportParams.setImageBasePath(upLoadPath);
+
+        /**
+         * 修改逻辑
+         */
+
+
+        mv.addObject(NormalExcelConstants.PARAMS, exportParams);
+        mv.addObject(NormalExcelConstants.DATA_LIST, pageList);
+        return mv;
     }
 
     /**
@@ -218,12 +276,12 @@ public class ActivityRecordController extends JeecgController<ActivityRecord, IA
         activityRecordTamp.setName("陈崇标");
         activityRecordTamp.setAcademy("信息技术与工程学院");
         activityRecordTamp.setClazz("软工1901班");
-        activityRecordTamp.setJoinType(0);
+        activityRecordTamp.setJoinType("0");
         activityRecordTamp.setAward("无");
-        activityRecordTamp.setCreditType(2);
+        activityRecordTamp.setCreditType("2");
         activityRecordTamp.setCredit(2.0);
         activityRecordTamp.setContact("伍xx1552xxxxxx");
-        activityRecordTamp.setYear(0);
+        activityRecordTamp.setYear("0");
         activityRecordTamp.setToName("伍xx");
         pageList.add(activityRecordTamp);
 
@@ -259,15 +317,24 @@ public class ActivityRecordController extends JeecgController<ActivityRecord, IA
         // 存放所有需要修改学时数据的学生
         List<SysUser> sysUserList = new ArrayList<SysUser>();
         // 存放通过用户名查找的用户
-        SysUser sysUser = new SysUser();
-        // 测试时返回计算结果学时后的用户数组
-        List<SysUser> listUser = new ArrayList<SysUser>();
-
-        // 导出Excel
-        ModelAndView mv = new ModelAndView(new JeecgEntityExcelView());
+        SysUser sysUser;
         // 创建导入错误的列表
         List<ActivityRecord> errorList = new ArrayList<ActivityRecord>();
-
+        // 参加类型字典
+        List<DictModel> joinTypeItems = sysDictService.queryEnableDictItemsByCode("join_type");
+        // 学时类型字典
+        List<DictModel> learnTimeTypeItems = sysDictService.queryEnableDictItemsByCode("learn_time_type");
+        // 学年类型字典
+        List<DictModel> yearItems = sysDictService.queryEnableDictItemsByCode("year");
+        // 学院字典 查出广商下所有学院或者部门
+        List<SysDepartTreeModel> academyItems = sysDepartService.queryTreeListByPid("604023e70310485d9b9b779c8983f34c","");
+        boolean joinTypeError;
+        boolean learnTimeTypeError;
+        boolean yearError;
+        boolean academyError;
+        Result res;
+        // 获取登录的用户信息
+        LoginUser loginUser = (LoginUser) SecurityUtils.getSubject().getPrincipal();
 
         for (Map.Entry<String, MultipartFile> entity : fileMap.entrySet()) {
             MultipartFile file = entity.getValue();// 获取上传文件对象
@@ -285,13 +352,61 @@ public class ActivityRecordController extends JeecgController<ActivityRecord, IA
                 // 获取导入的所有数据存入数组
                 List<ActivityRecord> listActivityRecord = ExcelImportUtil.importExcel(file.getInputStream(), ActivityRecord.class, params);
                 // 找出学号重复的记录
-                List<String> dupList = listActivityRecord.stream().collect(Collectors.groupingBy(ActivityRecord::getUid, Collectors.counting()))
-                        .entrySet().stream().filter(e -> e.getValue() > 1)
-                        .map(Map.Entry::getKey).collect(Collectors.toList());
+//                List<String> dupList = listActivityRecord.stream().collect(Collectors.groupingBy(ActivityRecord::getUid, Collectors.counting()))
+//                        .entrySet().stream().filter(e -> e.getValue() > 1)
+//                        .map(Map.Entry::getKey).collect(Collectors.toList());
 
                 for (int i = 0; i < listActivityRecord.size(); i++) {
+                    // 默认都是错误的
+                    joinTypeError = true;
+                    learnTimeTypeError = true;
+                    yearError = true;
+                    academyError = true;
                     // 获取当前记录
                     ActivityRecord activityRecord = listActivityRecord.get(i);
+                    /**
+                     * 导入的学时表中如果曾经存在数据，但是后来被删除了，
+                     * 会留下空白行虽然看起来没区别，但是程序会把空白行读入，
+                     * 经过转换后会得到数值全为空的类，暂时需要工具类判断这个类如果值全为空那么跳过
+                     * 暂时先判断学号和姓名为空的情况下为空数据
+                     */
+                    // TODO
+                    if (activityRecord.getName() == null && activityRecord.getUid() == null){
+                        continue;
+                    }
+                    // 循环判断参加类型是否存在数据字典中
+                    for (DictModel joinType:joinTypeItems){
+                        if (joinType.getValue().equals(activityRecord.getJoinType())){
+                            joinTypeError = false;
+                            break;
+                        }
+                    }
+                    // 循环判断学时类型是否存在数据字典中
+                    for (DictModel learnTimeType:learnTimeTypeItems){
+                        if (learnTimeType.getValue().equals(activityRecord.getCreditType())){
+                            learnTimeTypeError = false;
+                            break;
+                        }
+                    }
+                    // 循环判断学年类型是否存在数据字典中
+                    for (DictModel year:yearItems){
+                        if (year.getValue().equals(activityRecord.getYear())){
+                            yearError = false;
+                            break;
+                        }
+                    }
+                    // 循环判断学院是否存在数据字典中
+                    for (SysDepartTreeModel academy:academyItems){
+                        if (academy.getId().equals(activityRecord.getAcademy())){
+                            academyError = false;
+                            break;
+                        }
+                    }
+                    // 替换掉非数字字符
+                    activityRecord.setUid(activityRecord.getUid().replaceAll("[^\\d]",""));
+                    // 去掉名字里面的空格
+                    activityRecord.setName(activityRecord.getName().replace(" ",""));
+
                     // 通过学号查找学生
                     sysUser = sysUserService.getUserByName(activityRecord.getUid());
                     // 判断学号查找的用户是否为空 或者与学号查找到的用户姓名不一样
@@ -302,13 +417,29 @@ public class ActivityRecordController extends JeecgController<ActivityRecord, IA
                         errorMessage.add(activityRecord.getActivityName() + "导入发生异常：第" + lineNumber + "行用户学号或者姓名填写错误");
                         activityRecord.setRemark("学号或者姓名填写错误");
                         errorList.add(activityRecord);
-                    } else if (activityRecord.getYear() == null){
-					   // 判断学年是否填写
+                    } else if (joinTypeError) {
+                        // 参加类型填写错误
+                        errorLines++;
+                        // 数据行从第3行开始
+                        lineNumber = i + 3;
+                        errorMessage.add(activityRecord.getActivityName() + "导入发生异常：第" + lineNumber + "行参加类型填写错误");
+                        activityRecord.setRemark("参加类型填写错误");
+                        errorList.add(activityRecord);
+                    } else if (learnTimeTypeError) {
+                        // 认定项目填写错误
+                        errorLines++;
+                        // 数据行从第3行开始
+                        lineNumber = i + 3;
+                        errorMessage.add(activityRecord.getActivityName() + "导入发生异常：第" + lineNumber + "行认定项目填写错误");
+                        activityRecord.setRemark("认定项目填写错误");
+                        errorList.add(activityRecord);
+                    } else if (yearError){
+					   // 学年填写错误
 						errorLines++;
 						// 数据行从第3行开始
 						lineNumber = i + 3;
-						errorMessage.add(activityRecord.getActivityName() + "发生异常：第" + lineNumber + "行学年为空");
-                        activityRecord.setRemark("学年为空");
+						errorMessage.add(activityRecord.getActivityName() + "发生异常：第" + lineNumber + "行学年填写错误");
+                        activityRecord.setRemark("学年填写错误");
                         errorList.add(activityRecord);
                     } else if (activityRecord.getActivityName() == null) {
                         // 判断活动名是否填写
@@ -318,27 +449,37 @@ public class ActivityRecordController extends JeecgController<ActivityRecord, IA
                         errorMessage.add(activityRecord.getActivityName() + "发生异常：第" + lineNumber + "行活动名为空");
                         activityRecord.setRemark("活动名为空");
                         errorList.add(activityRecord);
-                    } else if(activityRecord.getAcademy() == null){
+                    } else if(academyError){
                         // 判断活学院是否填写
                         errorLines++;
                         // 数据行从第3行开始
                         lineNumber = i + 3;
-                        errorMessage.add(activityRecord.getActivityName() + "发生异常：第" + lineNumber + "行学院名为空");
-                        activityRecord.setRemark("学院名为空");
+                        errorMessage.add(activityRecord.getActivityName() + "发生异常：第" + lineNumber + "行学院名填写错误");
+                        activityRecord.setRemark("学院名填写错误");
                         errorList.add(activityRecord);
                     } else {
                         // 如果数据没有错误
                         // 保存活动记录并且把学时加入到学生中
                         // activityRecordService.addCreditByActivityRecord(sysUser,activityRecord);
-                        // 获取登录用户
-                        LoginUser loginUser = (LoginUser) SecurityUtils.getSubject().getPrincipal();
                         // 把记录的创建人和创建时间创建部门补全
                         activityRecord.setCreateBy(loginUser.getUsername());
                         activityRecord.setCreateTime(new Date());
                         activityRecord.setSysOrgCode(loginUser.getOrgCode());
-                        activityRecord.setRemark("");
+                        activityRecord.setRemark(null);
                         // 把学时记录计算到学生上重新对sysUser赋值
-                        sysUser = activityRecordService.addCreditByActivityRecord(sysUser,activityRecord);
+                        // 先从已经加入成功的学生数据sysUserList中判断是否已经存在一次
+                        boolean userIsExist = false;
+                        for(SysUser user:sysUserList){
+                            if(user.getUsername().equals(activityRecord.getUid())){
+                                // 如果前面存在过记录那么读取这个用户记录，不使用从数据库中读取出来的
+                                sysUser = activityRecordService.addCreditByActivityRecord(user,activityRecord);
+                                userIsExist = true;
+                                break;
+                            }
+                        }
+                        if (!userIsExist){
+                            sysUser = activityRecordService.addCreditByActivityRecord(sysUser,activityRecord);
+                        }
                         activityRecordList.add(activityRecord);
                         sysUserList.add(sysUser);
                         successLines++;
@@ -349,6 +490,13 @@ public class ActivityRecordController extends JeecgController<ActivityRecord, IA
                 // 如果数据完全正确，进行批量导入活动以及修改学生学时数据
                 activityRecordService.addCreditByActivityRecordBatch(sysUserList,activityRecordList);
 
+                FileStorage fileStorage = new FileStorage();
+                fileStorage.setCreateBy(loginUser.getRealname());
+                fileStorage.setCreateTime(new Date());
+                fileStorage.setSysOrgCode(loginUser.getOrgCode());
+                fileStorage.setDownloadCount(0);
+                fileStorage.setConent(loginUser.getRealname()+"上传"+fileMap.get("file").getOriginalFilename()+"，全部成功导入：共"+successLines+"条");
+                fileStorageService.save(fileStorage);
             } catch (Exception e) {
 				errorMessage.add("发生异常：" + e.getMessage());
                 log.error(e.getMessage(), e);
@@ -367,11 +515,25 @@ public class ActivityRecordController extends JeecgController<ActivityRecord, IA
 			errorMessage.add("发生异常：" +  "请检查学时类型、参加类型、学院、学年数据是否填写错误\n");
 			errorMessage.add("学时类型填写：\n\t创新创业素质\n\t思想品德素质\n\t身心素质\n\t法律素养 \n\t 文体素质\n");
 			errorMessage.add("参加类型填写：\n\t参加者\n\t工作人员\n\t观众\n");
-			errorMessage.add("学院填写： 信息技术与工程学院\n");
-			errorMessage.add("学年填写：2021-2022学年");
+			errorMessage.add("学年填写：2021-2022学年\n");
+            errorMessage.add("请使用Excel筛选数据查看是否存在，学时类型、参加类型、学年、学院等数据存在部分错误。");
             return ImportExcelUtil.imporReturnRes(errorLines, successLines, errorMessage);
 		}
-        return ActivityImportExcelUtil.imporReturnXls(errorLines, successLines, errorList);
+        res = ActivityImportExcelUtil.imporReturnXls(errorLines, successLines, errorList);
+        // 提取返回对象，进行文件存储
+        if (res.getResult() != null){
+            JSONObject result = (JSONObject) res.getResult();
+            String fileUrl = result.getString("fileUrl").replace("/sys/common/static/","");
+            FileStorage fileStorage = new FileStorage();
+            fileStorage.setUrl(fileUrl);
+            fileStorage.setCreateBy(loginUser.getRealname());
+            fileStorage.setCreateTime(new Date());
+            fileStorage.setSysOrgCode(loginUser.getOrgCode());
+            fileStorage.setDownloadCount(0);
+            fileStorage.setConent(loginUser.getRealname()+"上传"+fileMap.get("file").getOriginalFilename()+","+result.getString("msg"));
+            fileStorageService.save(fileStorage);
+        }
+        return res;
     }
 
 

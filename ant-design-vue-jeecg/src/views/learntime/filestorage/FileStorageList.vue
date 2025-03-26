@@ -10,8 +10,14 @@
     <!-- 查询区域-END -->
 
     <!-- 操作按钮区域 -->
-    <div class="table-operator" v-if="username == 'admin'">
+    <div class="table-operator" v-if='username == "admin"'>
       <a-button @click="handleAdd" type="primary" icon="plus">新增</a-button>
+      <a-button type="primary" icon="download" @click="handleExportXls('file_storage')">导出</a-button>
+      <a-upload name="file" :showUploadList="false" :multiple="false" :headers="tokenHeader" :action="importExcelUrl" @change="handleImportExcel">
+        <a-button type="primary" icon="import">导入</a-button>
+      </a-upload>
+      <!-- 高级查询区域 -->
+      <j-super-query :fieldList="superFieldList" ref="superQueryModal" @handleSuperQuery="handleSuperQuery"></j-super-query>
       <a-dropdown v-if="selectedRowKeys.length > 0">
         <a-menu slot="overlay">
           <a-menu-item key="1" @click="batchDel"><a-icon type="delete"/>删除</a-menu-item>
@@ -48,7 +54,7 @@
           <span v-if="!text" style="font-size: 12px;font-style: italic;">无图片</span>
           <img v-else :src="getImgView(text)" height="25px" alt="" style="max-width:80px;font-size: 12px;font-style: italic;"/>
         </template>
-        <template slot="fileSlot" slot-scope="text">
+        <template slot="fileSlot" slot-scope="text, record">
           <span v-if="!text" style="font-size: 12px;font-style: italic;">无文件</span>
           <a-button
             v-else
@@ -56,22 +62,22 @@
             type="primary"
             icon="download"
             size="small"
-            @click="downloadFile(text)">
+            @click="downloadErrorFile(text,record)">
             下载
           </a-button>
         </template>
 
-        <span slot="action" slot-scope="text, record"  v-if='username == "admin"'>
+        <span slot="action" slot-scope="text, record" v-if='username == "admin"'>
           <a @click="handleEdit(record)">编辑</a>
 
           <a-divider type="vertical" />
-          <a-dropdown >
+          <a-dropdown>
             <a class="ant-dropdown-link">更多 <a-icon type="down" /></a>
             <a-menu slot="overlay">
               <a-menu-item>
                 <a @click="handleDetail(record)">详情</a>
               </a-menu-item>
-              <a-menu-item >
+              <a-menu-item>
                 <a-popconfirm title="确定删除吗?" @confirm="() => handleDelete(record.id)">
                   <a>删除</a>
                 </a-popconfirm>
@@ -80,13 +86,10 @@
           </a-dropdown>
         </span>
 
-        <span v-else slot="action" slot-scope="text, record" >
-          <a @click="handleDetail(record)">查看</a>
-        </span>
       </a-table>
     </div>
 
-    <instructions-modal ref="modalForm" @ok="modalFormOk"></instructions-modal>
+    <file-storage-modal ref="modalForm" @ok="modalFormOk"></file-storage-modal>
   </a-card>
 </template>
 
@@ -95,19 +98,21 @@
   import '@/assets/less/TableExpand.less'
   import { mixinDevice } from '@/utils/mixin'
   import { JeecgListMixin } from '@/mixins/JeecgListMixin'
-  import InstructionsModal from './modules/InstructionsModal'
+  import FileStorageModal from './modules/FileStorageModal'
+  import { putAction } from '@api/manage'
   import store from '@/store/'
   import Vue from 'vue'
   import { USER_INFO } from '@/store/mutation-types'
+
   export default {
-    name: 'InstructionsList',
+    name: 'FileStorageList',
     mixins:[JeecgListMixin, mixinDevice],
     components: {
-      InstructionsModal
+      FileStorageModal
     },
     data () {
       return {
-        description: '功能说明管理页面',
+        description: 'file_storage管理页面',
         // 表头
         columns: [
           {
@@ -121,9 +126,40 @@
             }
           },
           {
-            title:'标题',
+            title:'文件存储的位置',
             align:"center",
-            dataIndex: 'title'
+            dataIndex: 'url',
+            scopedSlots: { customRender: 'fileSlot' }
+          },
+          {
+            title:'说明',
+            align:"center",
+            dataIndex: 'conent'
+          },
+          {
+            title:'下载次数',
+            align:"center",
+            dataIndex: 'downloadCount'
+          },
+          {
+            title:'创建人',
+            align:"center",
+            dataIndex: 'createBy'
+          },
+          {
+            title:'创建日期',
+            align:"center",
+            dataIndex: 'createTime'
+          },
+          {
+            title:'最后下载',
+            align:"center",
+            dataIndex: 'updateBy'
+          },
+          {
+            title:'最后下载日期',
+            align:"center",
+            dataIndex: 'updateTime'
           },
           {
             title: '操作',
@@ -135,22 +171,22 @@
           }
         ],
         url: {
-          list: "/learntime/instructions/list",
-          delete: "/learntime/instructions/delete",
-          deleteBatch: "/learntime/instructions/deleteBatch",
-          exportXlsUrl: "/learntime/instructions/exportXls",
-          importExcelUrl: "learntime/instructions/importExcel",
+          list: "/learntime/fileStorage/list",
+          delete: "/learntime/fileStorage/delete",
+          edit: "/learntime/fileStorage/edit",
+          deleteBatch: "/learntime/fileStorage/deleteBatch",
+          exportXlsUrl: "/learntime/fileStorage/exportXls",
+          importExcelUrl: "learntime/fileStorage/importExcel",
 
         },
         dictOptions:{},
         superFieldList:[],
-        userIdentity: '',
         username: ''
       }
     },
     created() {
-      this.getSuperFieldList();
-      this.initDictConfig();
+    this.getSuperFieldList();
+    this.getUsername();
     },
     computed: {
       importExcelUrl: function(){
@@ -159,22 +195,26 @@
     },
     methods: {
       initDictConfig(){
-        this.getUserIdentity();
-        this.getUsername();
       },
       getSuperFieldList(){
         let fieldList=[];
-        fieldList.push({type:'string',value:'title',text:'标题',dictCode:''})
-        fieldList.push({type:'Text',value:'content',text:'内容',dictCode:''})
-        fieldList.push({type:'string',value:'role',text:'可查看的角色',dictCode:'sys_role,role_name,id'})
+        fieldList.push({type:'string',value:'url',text:'文件存储的位置'})
+        fieldList.push({type:'string',value:'conent',text:'说明'})
+        fieldList.push({type:'int',value:'downloadCount',text:'下载次数'})
         this.superFieldList = fieldList
-      },
-      getUserIdentity(){
-        this.userIdentity = store.getters.userIdentity
-        // console.log("identity"+this.userIdentity)
       },
       getUsername(){
         this.username = Vue.ls.get(USER_INFO).username
+      },
+      downloadErrorFile(text,record){
+        JeecgListMixin.methods.downloadFile(text)
+        record.downloadCount += 1
+        record.updateBy = store.getters.nickname
+        putAction(this.url.edit,{id:record.id,downloadCount:record.downloadCount,updateBy:record.updateBy}).then(res => {
+          if (res.success) {
+            console.log(res.result)
+          }
+        })
       }
     }
   }

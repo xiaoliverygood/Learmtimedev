@@ -49,6 +49,5 @@
   }
 </script>
 
-<style lang="less" scoped>
-  @import "index";
+<style lang="less" src='../index.less' scoped>
 </style>

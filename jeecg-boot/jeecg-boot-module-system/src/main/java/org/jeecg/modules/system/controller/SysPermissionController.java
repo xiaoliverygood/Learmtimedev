@@ -5,6 +5,8 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
+import net.bytebuddy.asm.Advice;
+import net.bytebuddy.implementation.bind.annotation.Origin;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authz.annotation.RequiresRoles;
@@ -203,6 +205,7 @@ public class SysPermissionController {
 	 * 
 	 * @return
 	 */
+
 	@RequestMapping(value = "/getUserPermissionByToken", method = RequestMethod.GET)
 	public Result<?> getUserPermissionByToken() {
 		Result<JSONObject> result = new Result<JSONObject>();

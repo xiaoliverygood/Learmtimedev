@@ -66,9 +66,9 @@
 <!--        </a-form-model-item>-->
 
         <!--部门分配-->
-<!--        <a-form-model-item label="部门分配" :labelCol="labelCol" :wrapperCol="wrapperCol" v-show="!departDisabled">-->
-<!--          <j-select-depart v-model="model.selecteddeparts" :multi="true" @back="backDepartInfo" :backDepart="true" :treeOpera="true">></j-select-depart>-->
-<!--        </a-form-model-item>-->
+        <a-form-model-item label="所在学院" :labelCol="labelCol" :wrapperCol="wrapperCol" v-show="!departDisabled">
+          <j-select-depart v-model="model.selecteddeparts" :multi="true" @back="backDepartInfo" :backDepart="true" :treeOpera="true">></j-select-depart>
+        </a-form-model-item>
 
         <!--租户分配-->
 <!--        <a-form-model-item label="租户分配" :labelCol="labelCol" :wrapperCol="wrapperCol" v-show="!departDisabled">-->
