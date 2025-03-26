@@ -430,8 +430,8 @@ public class ActivityRecordController extends JeecgController<ActivityRecord, IA
                         errorLines++;
                         // 数据行从第3行开始
                         lineNumber = i + 3;
-                        errorMessage.add(activityRecord.getActivityName() + "导入发生异常：第" + lineNumber + "行认定项目填写错误");
-                        activityRecord.setRemark("认定项目填写错误");
+                        errorMessage.add(activityRecord.getActivityName() + "导入发生异常：第" + lineNumber + "行认定维度填写错误");
+                        activityRecord.setRemark("认定维度填写错误");
                         errorList.add(activityRecord);
                     } else if (yearError){
 					   // 学年填写错误

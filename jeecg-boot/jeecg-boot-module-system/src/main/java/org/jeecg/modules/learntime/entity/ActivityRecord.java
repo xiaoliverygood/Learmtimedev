@@ -72,12 +72,12 @@ public class ActivityRecord implements Serializable {
     @ApiModelProperty(value = "获奖情况")
     private java.lang.String award;
 	/**学时类型*/
-	@Excel(name = "认定项目", width = 15, dicCode = "learn_time_type")
+	@Excel(name = "认定维度", width = 15, dicCode = "learn_time_type")
 	@Dict(dicCode = "learn_time_type")
     @ApiModelProperty(value = "认定项目")
     private java.lang.String creditType;
 	/**学时数量*/
-	@Excel(name = "认定活动时", width = 15)
+	@Excel(name = "认定项目积分", width = 15)
     @ApiModelProperty(value = "认定活动时")
     private java.lang.Double credit;
 	/**填报人及联系方式*/
